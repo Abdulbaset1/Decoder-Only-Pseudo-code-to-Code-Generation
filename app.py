@@ -4,6 +4,7 @@ from transformers import GPT2Tokenizer, GPT2LMHeadModel
 import requests
 import os
 import time
+import tempfile
 
 # Set page configuration
 st.set_page_config(
@@ -56,19 +57,75 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
+    .download-section {
+        background-color: #d4edda;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #28a745;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+def download_model_from_github():
+    """Download the model from GitHub releases"""
+    model_url = "https://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1/gpt2_finetuned.pt"
+    model_path = "gpt2_finetuned.pt"
+    
+    # Check if model already exists
+    if os.path.exists(model_path):
+        st.success("✅ Model file already exists locally!")
+        return True
+    
+    st.warning("📥 Model file not found locally. Downloading from GitHub...")
+    
+    try:
+        # Show download progress
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Download the model
+        response = requests.get(model_url, stream=True)
+        response.raise_for_status()
+        
+        # Get total file size
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded_size = 0
+        
+        with open(model_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded_size += len(chunk)
+                    
+                    # Update progress
+                    if total_size > 0:
+                        progress = int((downloaded_size / total_size) * 100)
+                        progress_bar.progress(progress)
+                        status_text.text(f"Downloading: {downloaded_size}/{total_size} bytes ({progress}%)")
+        
+        progress_bar.progress(100)
+        status_text.text("Download completed!")
+        st.success("✅ Model downloaded successfully!")
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Failed to download model: {str(e)}")
+        return False
 
 @st.cache_resource
 def load_model_and_tokenizer():
     """Load the fine-tuned model and tokenizer"""
     try:
+        # First, ensure model is downloaded
+        if not download_model_from_github():
+            return None, None
+        
         # Check if model file exists
-        model_path = "http://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1/gpt2_finetuned.pt"
+        model_path = "gpt2_finetuned.pt"
         
         if not os.path.exists(model_path):
             st.error(f"Model file '{model_path}' not found.")
-            st.info("Please make sure the model file is in the same directory as this script.")
             return None, None
         
         # Initialize tokenizer
@@ -139,12 +196,32 @@ def main():
     # Header
     st.markdown('<div class="main-header">🧠 PseudoCode to Python Code Generator</div>', unsafe_allow_html=True)
     
+    # Model loading section
+    st.markdown("---")
+    st.markdown("### 🔧 Model Setup")
+    
     # Load model
     with st.spinner("🔄 Loading AI model... This may take a few moments."):
         model, tokenizer = load_model_and_tokenizer()
     
     if model is None or tokenizer is None:
-        st.error("Failed to load the model. Please check if 'gpt2_finetuned.pt' is in the correct location.")
+        st.error("Failed to load the model. Please check your internet connection and try again.")
+        
+        # Manual download option
+        st.markdown("---")
+        st.markdown("### 🔄 Alternative Download Options")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Retry Download", use_container_width=True):
+                st.rerun()
+        
+        with col2:
+            st.markdown("""
+            **Manual Download:**
+            If automatic download fails, please download the model manually from:
+            [GitHub Releases](https://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1)
+            """)
         return
     
     # Sidebar
@@ -166,7 +243,16 @@ def main():
         "Simply enter your algorithm in plain English pseudocode and let the AI generate the corresponding Python code!"
     )
     
+    # Model info in sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📊 Model Information")
+    st.sidebar.write(f"**Model:** GPT-2 Fine-tuned")
+    st.sidebar.write(f"**Parameters:** 124M")
+    st.sidebar.write(f"**Training Data:** SPOC Dataset")
+    st.sidebar.write(f"**Source:** [GitHub](https://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation)")
+    
     # Main content area
+    st.markdown("---")
     col1, col2 = st.columns([1, 1])
     
     with col1:
@@ -175,7 +261,7 @@ def main():
         # Example selection
         example_option = st.selectbox(
             "Choose an example or write your own:",
-            ["Custom Input", "Sum of List", "Find Maximum", "Factorial", "Fibonacci", "Palindrome Check"]
+            ["Custom Input", "Sum of List", "Find Maximum", "Factorial", "Fibonacci", "Palindrome Check", "Binary Search"]
         )
         
         # Predefined examples
@@ -185,6 +271,7 @@ def main():
             "Factorial": "Read number n\nSet result to 1\nFor i from 1 to n\n    Multiply result by i\nPrint result",
             "Fibonacci": "Read number n\nIf n <= 0\n    Print 0\nElse if n == 1\n    Print 1\nElse\n    a = 0\n    b = 1\n    For i from 2 to n\n        c = a + b\n        a = b\n        b = c\n    Print b",
             "Palindrome Check": "Read string s\nSet left to 0\nSet right to length of s - 1\nWhile left < right\n    If s[left] != s[right]\n        Print 'Not palindrome'\n        Exit\n    left = left + 1\n    right = right - 1\nPrint 'Palindrome'",
+            "Binary Search": "Function binary_search(arr, target):\n    Set low to 0\n    Set high to length of arr - 1\n    While low <= high:\n        Set mid to (low + high) // 2\n        If arr[mid] == target:\n            Return mid\n        Else if arr[mid] < target:\n            Set low to mid + 1\n        Else:\n            Set high to mid - 1\n    Return -1",
             "Custom Input": ""
         }
         
@@ -258,6 +345,7 @@ def main():
                         - **Break down complex algorithms** into smaller steps
                         - **Specify data types** when important
                         - **Include edge cases** in your description
+                        - **Use consistent indentation** in your pseudocode
                         """)
             else:
                 st.warning("⚠️ Please enter some pseudocode to generate Python code.")
@@ -299,7 +387,7 @@ def main():
     st.markdown(
         "<div style='text-align: center; color: #666;'>"
         "Built with ❤️ using Streamlit and Fine-tuned GPT-2 | "
-        "PseudoCode to Python Code Generation"
+        "Model: Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation"
         "</div>", 
         unsafe_allow_html=True
     )
