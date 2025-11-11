@@ -13,10 +13,42 @@ import numpy as np
 from tqdm import tqdm
 import os
 import logging
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def download_model_if_needed():
+    """Download the model from GitHub releases if not present"""
+    model_url = "https://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1/gpt2_finetuned.pt"
+    model_path = "gpt2_finetuned.pt"
+    
+    if not os.path.exists(model_path):
+        logger.info("Model file not found locally. Downloading from GitHub...")
+        try:
+            response = requests.get(model_url, stream=True)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            
+            with open(model_path, 'wb') as f, tqdm(
+                desc="Downloading model",
+                total=total_size,
+                unit='B',
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as pbar:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        pbar.update(len(chunk))
+            
+            logger.info("Model downloaded successfully!")
+        except Exception as e:
+            logger.error(f"Failed to download model: {e}")
+            return False
+    return True
 
 # ============================================================================
 # 1. DATA PREPROCESSING
@@ -170,13 +202,19 @@ def train_model(train_dataset, eval_dataset, model, tokenizer, output_dir='./gpt
 class PseudoCodeGenerator:
     """Class for generating Python code from pseudocode"""
     
-    def __init__(self, model_path='http://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1/gpt2_finetuned.pt'):
+    def __init__(self, model_path='gpt2_finetuned.pt'):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model, self.tokenizer = self._load_model(model_path)
         self.model.to(self.device)
         
     def _load_model(self, model_path):
         """Load the fine-tuned model and tokenizer"""
+        # First, download model if needed
+        if not os.path.exists(model_path):
+            logger.info("Model not found locally. Downloading...")
+            if not download_model_if_needed():
+                raise FileNotFoundError(f"Could not download model from GitHub releases")
+        
         # Load tokenizer
         tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
         tokenizer.pad_token = tokenizer.eos_token
@@ -185,12 +223,9 @@ class PseudoCodeGenerator:
         model = GPT2LMHeadModel.from_pretrained('gpt2')
         
         # Load fine-tuned weights
-        if os.path.exists(model_path):
-            checkpoint = torch.load(model_path, map_location='cpu')
-            model.load_state_dict(checkpoint['model_state_dict'])
-            logger.info(f"Loaded fine-tuned model from {model_path}")
-        else:
-            logger.warning(f"Model path {model_path} not found. Using base GPT-2 model.")
+        checkpoint = torch.load(model_path, map_location='cpu')
+        model.load_state_dict(checkpoint['model_state_dict'])
+        logger.info(f"Loaded fine-tuned model from {model_path}")
         
         return model, tokenizer
     
