@@ -222,8 +222,8 @@ class PseudoCodeGenerator:
         # Load model architecture
         model = GPT2LMHeadModel.from_pretrained('gpt2')
         
-        # Load fine-tuned weights
-        checkpoint = torch.load(model_path, map_location='cpu')
+        # Load fine-tuned weights with weights_only=False for PyTorch 2.6 compatibility
+        checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
         logger.info(f"Loaded fine-tuned model from {model_path}")
         
