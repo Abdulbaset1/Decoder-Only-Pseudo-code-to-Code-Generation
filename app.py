@@ -64,7 +64,7 @@ def load_model_and_tokenizer():
     """Load the fine-tuned model and tokenizer"""
     try:
         # Check if model file exists
-        model_path = "http://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1"
+        model_path = "http://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1/gpt2_finetuned.pt"
         
         if not os.path.exists(model_path):
             st.error(f"Model file '{model_path}' not found.")
