@@ -64,6 +64,13 @@ st.markdown("""
         border-left: 4px solid #28a745;
         margin: 1rem 0;
     }
+    .warning-box {
+        background-color: #fff3cd;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid #ffc107;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -135,8 +142,8 @@ def load_model_and_tokenizer():
         # Initialize model
         model = GPT2LMHeadModel.from_pretrained('gpt2')
         
-        # Load fine-tuned weights
-        checkpoint = torch.load(model_path, map_location='cpu')
+        # Load fine-tuned weights with weights_only=False for PyTorch 2.6 compatibility
+        checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
         model.load_state_dict(checkpoint['model_state_dict'])
         
         st.success("✅ Model loaded successfully!")
@@ -195,6 +202,14 @@ def generate_code(model, tokenizer, pseudocode, max_length=512, temperature=0.7,
 def main():
     # Header
     st.markdown('<div class="main-header">🧠 PseudoCode to Python Code Generator</div>', unsafe_allow_html=True)
+    
+    # PyTorch 2.6 compatibility notice
+    st.markdown("""
+    <div class="warning-box">
+    <h4>⚠️ PyTorch 2.6 Compatibility Note</h4>
+    <p>This app uses <code>weights_only=False</code> for PyTorch 2.6+ compatibility. The model is loaded from a trusted source (GitHub releases).</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Model loading section
     st.markdown("---")
@@ -387,7 +402,8 @@ def main():
     st.markdown(
         "<div style='text-align: center; color: #666;'>"
         "Built with ❤️ using Streamlit and Fine-tuned GPT-2 | "
-        "Model: Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation"
+        "Model: Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation | "
+        "PyTorch 2.6+ Compatible"
         "</div>", 
         unsafe_allow_html=True
     )
