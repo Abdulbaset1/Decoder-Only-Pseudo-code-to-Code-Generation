@@ -170,7 +170,7 @@ def train_model(train_dataset, eval_dataset, model, tokenizer, output_dir='./gpt
 class PseudoCodeGenerator:
     """Class for generating Python code from pseudocode"""
     
-    def __init__(self, model_path='gpt2_finetuned.pt'):
+    def __init__(self, model_path='http://github.com/Abdulbaset1/Decoder-Only-Pseudo-code-to-Code-Generation/releases/tag/v1'):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model, self.tokenizer = self._load_model(model_path)
         self.model.to(self.device)
